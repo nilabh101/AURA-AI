@@ -1,42 +1,27 @@
-# AURA AI — Windows desktop MVP
+# AURA AI — Gemini Edition
 
-A floating Windows assistant for study notes, transcript analysis, screen explanations, and interview practice.
+## Included
+- Translucent, always-on-top, draggable PySide6 floating UI
+- Compact mode and Presentation Mode
+- Ctrl+Space show/hide shortcut plus system tray controls when Windows exposes a tray
+- Gemini chat, screenshot analysis, document text extraction (TXT, Markdown, PDF, DOCX, SRT/VTT and code/text files)
+- Click-to-talk: records up to 8 seconds and sends WAV audio to Gemini
+- Optional local spoken replies via Windows text-to-speech
+- Study, creator, interview, concept explanation, and code-helper modes
 
-## Features in this starter
-- Always-on-top floating window
-- Global `Ctrl + Space` toggle (may require accessibility permission or elevated privileges on some systems)
-- Manual screen capture with a review step
-- Optional screenshot + prompt sent to the AI model
-- TXT, MD, SRT, VTT, PDF and DOCX text import
-- Presentation mode hides the assistant on demand
-- Clear, visible AI errors rather than fake responses
+## Windows 11 setup
+1. Install Python 3.11.
+2. Extract these files into your existing AURA AI project folder, replacing `app.py`, `requirements.txt`, `.env.example`, `install.ps1`, and `run.ps1`. Keep your `.env` private.
+3. Open PowerShell in the project folder and run:
+   ```powershell
+   Set-ExecutionPolicy -Scope Process Bypass
+   .\install.ps1
+   ```
+4. Create a free API key at https://aistudio.google.com/app/apikey and paste it into `.env` as `GEMINI_API_KEY=...`.
+5. Run ` .\run.ps1 `.
 
-## Requirements
-- Windows 10/11
-- Python 3.11 recommended
-- An OpenAI API key and API access; API billing is separate from ChatGPT subscriptions
-
-## Setup
-1. Extract this folder.
-2. Open PowerShell in the extracted `AuraAI` folder.
-3. Run `Set-ExecutionPolicy -Scope Process Bypass` if PowerShell blocks local scripts.
-4. Run `.un.ps1`.
-5. When Notepad opens `.env`, replace the placeholder with your API key and save.
-6. Run `.un.ps1` again.
-
-Alternatively, install manually:
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-notepad .env
-python app.py
-```
-
-## Important limitations
-- Screen capture is manual. Review the captured screenshot before asking the model to analyze it.
-- This MVP does not automatically detect lecture highlights, record audio, monitor all apps, or automatically detect screen sharing.
-- Presentation mode is an explicit privacy control, not a way to evade exam proctoring or secretly receive live interview answers.
-- The screenshot is saved locally as `aura_capture.png` until cleared or overwritten. Delete it if you no longer need it.
-- Never share your `.env` file or commit it to GitHub.
+## Notes
+- Gemini free-tier quotas, model access, and regional availability can change; confirm the current limits in Google AI Studio. Free does not mean unlimited.
+- Audio is sent to Google's API when Talk is used. Windows may ask for microphone permission.
+- If Ctrl+Space fails, use the system tray menu or close/hide controls; global hotkeys may be blocked by permissions or another app.
+- Test the app and microphone before using it during a presentation.
