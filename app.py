@@ -106,7 +106,7 @@ class Aura(QWidget):
         self.setWindowTitle("AURA AI")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint|Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.resize(460,700); self.setMinimumSize(400,560); self.drag=None; self.compact=False
+        self.resize(460,750); self.setMinimumSize(400,560); self.drag=None; self.compact=False
         self.image_path=None; self.attachment=""; self.workers=[]
         self.mode_prompt="Help with the user's request."
         self.build()
@@ -130,7 +130,7 @@ class Aura(QWidget):
         self.compact_btn=QPushButton("-"); self.compact_btn.setFixedSize(32,31); self.compact_btn.clicked.connect(self.toggle_compact); top.addWidget(self.compact_btn)
         hide=QPushButton("X"); hide.setFixedSize(32,31); hide.clicked.connect(self.hide); top.addWidget(hide); v.addLayout(top)
         self.status_label=QLabel("Ready"); self.status_label.setObjectName("muted"); v.addWidget(self.status_label)
-        row=QHBoxLayout(); self.mode=QComboBox(); self.mode.addItems(["General assistant","Study & notes","Creator studio","Interview practice","Explain a concept","Code helper"]); self.mode.currentTextChanged.connect(self.set_mode); row.addWidget(self.mode,1)
+        row=QHBoxLayout(); self.mode=QComboBox(); self.mode.addItems(["General assistant","Study & notes","Creator studio","Editing assistant","Quick concise answers","Interview practice","Explain a concept","Code helper"]); self.mode.currentTextChanged.connect(self.set_mode); row.addWidget(self.mode,1)
         pres=QPushButton("Presentation mode"); pres.clicked.connect(self.presentation); row.addWidget(pres); v.addLayout(row)
         self.chat=QTextEdit(); self.chat.setObjectName("chat"); self.chat.setReadOnly(True); v.addWidget(self.chat,1)
         row=QHBoxLayout()
@@ -140,8 +140,16 @@ class Aura(QWidget):
         self.file_label=QLabel("No attachment"); self.file_label.setObjectName("muted"); self.file_label.setWordWrap(True); v.addWidget(self.file_label)
         self.input=QTextEdit(); self.input.setPlaceholderText("Message AURA (Ctrl+Enter to send)"); self.input.setFixedHeight(74); self.input.installEventFilter(self); v.addWidget(self.input)
         bottom=QHBoxLayout(); self.talk=QPushButton("Talk"); self.talk.setObjectName("mic"); self.talk.clicked.connect(self.voice); bottom.addWidget(self.talk)
-        self.speak_check=QCheckBox("Speak replies"); self.speak_check.setChecked(True); bottom.addWidget(self.speak_check); bottom.addStretch()
-        self.send=QPushButton("Ask Gemini"); self.send.setObjectName("primary"); self.send.clicked.connect(self.ask); bottom.addWidget(self.send); v.addLayout(bottom)
+        self.speak_check=QCheckBox("Speak replies"); self.speak_check.setChecked(True); bottom.addWidget(self.speak_check)
+        self.short_check=QCheckBox("Short answers"); self.short_check.setToolTip("Ask AURA to use short, conversational phrases"); bottom.addWidget(self.short_check)
+        v.addLayout(bottom)
+        voice_row=QHBoxLayout(); voice_row.addWidget(QLabel("Voice"))
+        self.voice_choice=QComboBox(); self.voice_choice.setMinimumWidth(150); self.voice_choice.addItems(["Clear / default", "Voice 2", "Voice 3"]); self.voice_choice.setToolTip("Select an installed Windows text-to-speech voice")
+        self._voice_ids=[]; self._load_voices(); voice_row.addWidget(self.voice_choice,1)
+        self.test_voice_btn=QPushButton("Test voice"); self.test_voice_btn.clicked.connect(lambda: self.speak("Hi! I'm AURA. How can I help you?")); voice_row.addWidget(self.test_voice_btn)
+        v.addLayout(voice_row)
+        send_row=QHBoxLayout(); send_row.addStretch()
+        self.send=QPushButton("Ask Gemini"); self.send.setObjectName("primary"); self.send.clicked.connect(self.ask); send_row.addWidget(self.send); v.addLayout(send_row)
         foot=QLabel("Gemini API | Ctrl + Space restores hidden AURA"); foot.setObjectName("muted"); foot.setAlignment(Qt.AlignmentFlag.AlignCenter); v.addWidget(foot)
 
     def move_corner(self):
@@ -233,6 +241,8 @@ class Aura(QWidget):
         self.mode_prompt={
             "Study & notes":"Act as a patient tutor. Explain step by step with examples.",
             "Creator studio":"Act as a creative producer for short videos, YouTube, hooks, and scripts.",
+            "Editing assistant":"Help edit video, audio, photos, reels, and written content. Give practical editing steps, recommend useful cuts, pacing, captions, transitions, sound design, and export settings. Ask which editing app only if needed.",
+            "Quick concise answers":"Answer conversationally in short, clear phrases. Lead with the answer, use simple words, avoid long explanations, and give no more than 3 bullets unless asked for detail.",
             "Interview practice":"Act as an interviewer. Ask one question at a time and give constructive feedback.",
             "Explain a concept":"Explain simply first, then deepen with an example and recap.",
             "Code helper":"Give runnable code, explain where it goes, and avoid fake functionality.",
@@ -240,6 +250,8 @@ class Aura(QWidget):
         }.get(m,"Help with the user's request.")
     def ask(self):
         prompt=self.input.toPlainText().strip()
+        if self.short_check.isChecked():
+            prompt = "Keep your response short, clear, and conversational. Use simple phrases and no more than 3 bullets unless detail is requested.\n\n" + prompt
         if not prompt and not self.image_path and not self.attachment:
             self.status("Type a message or attach something"); return
         self.input.clear(); self.say("YOU",prompt or "Analyze the attachment.")
@@ -262,7 +274,10 @@ class Aura(QWidget):
             screen=QGuiApplication.primaryScreen()
             if not screen: raise RuntimeError("No screen available")
             pix=screen.grabWindow(0); fd,path=tempfile.mkstemp(prefix="aura_screen_",suffix=".png"); os.close(fd); pix.save(path,"PNG")
-            self.image_path=path; self.file_label.setText("Screenshot ready - ask Gemini about it"); self.show_focus(); self.status("Screenshot captured")
+            self.image_path=path; self.file_label.setText("Screenshot captured — Gemini can inspect it")
+            self.show_focus(); self.status("Screenshot captured — suggesting next steps...")
+            self.input.setPlainText("Analyze this screenshot and suggest the 3 most useful next actions I should take based on what is visible. Be specific, concise, and do not assume anything that cannot be seen.")
+            QTimer.singleShot(150, self.ask)
         except Exception as e: self.show_focus(); self.status("Screenshot failed: "+str(e))
     def voice(self):
         if not AUDIO_OK:
@@ -289,13 +304,44 @@ class Aura(QWidget):
         text = re.sub(r"\n{2,}", ". ", text)
         return re.sub(r"\s+", " ", text).strip()
 
+    def _load_voices(self):
+        """Offer up to three real voices installed on this Windows computer."""
+        if not TTS_OK:
+            self.voice_choice.setEnabled(False)
+            self.voice_choice.setToolTip("Install pyttsx3 / Windows speech voices to enable voice selection")
+            return
+        try:
+            engine = pyttsx3.init()
+            voices = engine.getProperty("voices") or []
+            engine.stop()
+            self._voice_ids = [getattr(v, "id", "") for v in voices[:3]]
+            labels = []
+            for i, voice in enumerate(voices[:3]):
+                name = getattr(voice, "name", "") or f"Windows voice {i+1}"
+                labels.append(name[:28])
+            if labels:
+                self.voice_choice.clear()
+                self.voice_choice.addItems(labels)
+            else:
+                self.voice_choice.clear(); self.voice_choice.addItem("System default")
+        except Exception:
+            self._voice_ids = []
+            self.voice_choice.clear(); self.voice_choice.addItem("System default")
+
     def speak(self,text):
         if not TTS_OK: return
         clean = self._speech_text(text)
         if not clean: return
+        selected = self.voice_choice.currentIndex() if hasattr(self, "voice_choice") else 0
+        voice_id = self._voice_ids[selected] if getattr(self, "_voice_ids", []) and selected < len(self._voice_ids) else None
         def run():
             try:
-                engine=pyttsx3.init(); engine.setProperty("rate",180); engine.say(clean[:3500]); engine.runAndWait(); engine.stop()
+                engine=pyttsx3.init()
+                if voice_id:
+                    engine.setProperty("voice", voice_id)
+                engine.setProperty("rate", 165)
+                engine.setProperty("volume", 0.9)
+                engine.say(clean[:3500]); engine.runAndWait(); engine.stop()
             except Exception: pass
         threading.Thread(target=run,daemon=True).start()
     def clear_chat(self): self.chat.clear(); self.say("AURA","Conversation cleared. What would you like to work on?"); self.status("Ready")
@@ -306,8 +352,8 @@ class Aura(QWidget):
     def show_focus(self): self.show(); self.raise_(); self.activateWindow(); self.input.setFocus()
     def toggle_compact(self):
         self.compact=not self.compact
-        for x in [self.status_label,self.mode,self.chat,self.screen,self.attach,self.file_label,self.input,self.talk,self.speak_check,self.send]: x.setVisible(not self.compact)
-        self.resize(260,68) if self.compact else self.resize(460,700)
+        for x in [self.status_label,self.mode,self.chat,self.screen,self.attach,self.file_label,self.input,self.talk,self.speak_check,self.short_check,self.voice_choice,self.test_voice_btn,self.send]: x.setVisible(not self.compact)
+        self.resize(260,68) if self.compact else self.resize(460,750)
         self.compact_btn.setText("+" if self.compact else "-")
         if self.compact: self.move_corner()
         else: self.move_corner()
@@ -328,4 +374,3 @@ def main():
     app=QApplication(sys.argv); app.setApplicationName("AURA AI"); app.setQuitOnLastWindowClosed(False)
     w=Aura(); w.show(); sys.exit(app.exec())
 if __name__=="__main__": main()
-
