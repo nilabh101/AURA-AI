@@ -22,3 +22,7 @@ Then open http://localhost:8080.
 6. Save and wait for the Pages deployment workflow to complete. GitHub will show the actual live URL in Settings → Pages.
 
 The site links to the existing GitHub repository. It does not claim a downloadable binary is available; add a release/download link only after publishing a tested release artifact.
+
+
+## Windows download link
+The site download buttons point to the latest GitHub Release asset at `https://github.com/nilabh101/AURA-AI/releases/latest/download/AURA-AI-Windows.zip`. Publish a GitHub Release with an asset named exactly `AURA-AI-Windows.zip` for the link to work.
