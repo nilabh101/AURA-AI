@@ -8,7 +8,8 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import *
 
-load_dotenv()
+APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+load_dotenv(APP_DIR / ".env")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 try:
     import keyboard
